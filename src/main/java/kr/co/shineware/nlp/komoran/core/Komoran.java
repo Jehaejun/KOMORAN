@@ -33,6 +33,8 @@ import kr.co.shineware.nlp.komoran.model.Tag;
 import kr.co.shineware.nlp.komoran.modeler.model.IrregularNode;
 import kr.co.shineware.nlp.komoran.modeler.model.Observation;
 import kr.co.shineware.nlp.komoran.parser.KoreanUnitParser;
+import kr.co.shineware.nlp.komoran.parser.model.UnitToken;
+import kr.co.shineware.nlp.komoran.parser.model.UnitTokenList;
 import kr.co.shineware.nlp.komoran.util.KomoranCallable;
 import kr.co.shineware.util.common.file.FileUtil;
 import kr.co.shineware.util.common.model.Pair;
@@ -128,9 +130,10 @@ public class Komoran implements Cloneable{
 		ContinuousSymbolInfo continuousSymbolInfo = new ContinuousSymbolInfo();
 
 		//자소 단위로 분할
-		String jasoUnits = unitParser.parse(sentence);
+//		List<UnitToken> unitTokenList = unitParser.parseToJasoList(sentence);
+		UnitTokenList unitTokenList = new UnitTokenList(unitParser.parseToJasoList(sentence));
 
-		int length = jasoUnits.length();
+		int length = unitTokenList.length();
 		//start 노드 또는 end 노드의 바로 다음 인덱스
 		//어절의 시작을 알리는 idx
 		int prevStartIdx = 0;
@@ -138,30 +141,30 @@ public class Komoran implements Cloneable{
 
 		for(int i=0; i<length; i++){
 			//기분석 사전
-			int skipIdx = this.lookupFwd(lattice,jasoUnits,i);
-			if(skipIdx != -1){
-				i = skipIdx-1;
-				continue;
-			}
+//			int skipIdx = this.lookupFwd(lattice,unitTokenList,i);
+//			if(skipIdx != -1){
+//				i = skipIdx-1;
+//				continue;
+//			}
+//
+//			//띄어쓰기인 경우
+//			if(unitTokenList.charAt(i) == ' '){
+//				this.consumeContiniousSymbolParserBuffer(lattice,i,continuousSymbolInfo);
+//				this.bridgeToken(lattice,i,unitTokenList.getPlainText(),prevStartIdx);
+//				prevStartIdx = i+1;
+//			}
+//			this.continiousSymbolParsing(lattice,unitTokenList.charAt(i),i,continuousSymbolInfo); //숫자, 영어, 외래어 파싱
+//			this.symbolParsing(lattice,unitTokenList.charAt(i),i); // 기타 심볼 파싱
+//			this.userDicParsing(lattice,userDicFindContext,unitTokenList.charAt(i),i); //사용자 사전 적용
 
-			//띄어쓰기인 경우
-			if(jasoUnits.charAt(i) == ' '){
-				this.consumeContiniousSymbolParserBuffer(lattice,i,continuousSymbolInfo);
-				this.bridgeToken(lattice,i,jasoUnits,prevStartIdx);
-				prevStartIdx = i+1;
-			}
-			this.continiousSymbolParsing(lattice,jasoUnits.charAt(i),i,continuousSymbolInfo); //숫자, 영어, 외래어 파싱
-			this.symbolParsing(lattice,jasoUnits.charAt(i),i); // 기타 심볼 파싱
-			this.userDicParsing(lattice,userDicFindContext,jasoUnits.charAt(i),i); //사용자 사전 적용
-
-			this.regularParsing(lattice,observationFindContext,jasoUnits.charAt(i),i); //일반규칙 파싱
-			this.irregularParsing(lattice,irregularFindContext,jasoUnits.charAt(i),i); //불규칙 파싱
-			this.irregularExtends(lattice,jasoUnits.charAt(i),i); //불규칙 확장
+			this.regularParsing(lattice,observationFindContext,unitTokenList.charAt(i),i); //일반규칙 파싱
+			this.irregularParsing(lattice,irregularFindContext,unitTokenList.charAt(i),i); //불규칙 파싱
+			this.irregularExtends(lattice,unitTokenList.charAt(i),i); //불규칙 확장
 
 		}
 
-		this.consumeContiniousSymbolParserBuffer(lattice,jasoUnits,continuousSymbolInfo);
-		lattice.setLastIdx(jasoUnits.length());
+		this.consumeContiniousSymbolParserBuffer(lattice,unitTokenList,continuousSymbolInfo);
+		lattice.setLastIdx(unitTokenList.length());
 		inserted = lattice.appendEndNode();
 		//입력 문장의 끝에 END 품사가 올 수 없는 경우
 		if(!inserted){
@@ -169,7 +172,7 @@ public class Komoran implements Cloneable{
 			if(prevStartIdx != 0){
 				NAPenaltyScore += lattice.getNodeList(prevStartIdx).get(0).getScore();
 			}
-			LatticeNode latticeNode = new LatticeNode(prevStartIdx,jasoUnits.length(),new MorphTag(jasoUnits.substring(prevStartIdx, jasoUnits.length()), SYMBOL.NA, this.resources.getTable().getId(SYMBOL.NA)),NAPenaltyScore);
+			LatticeNode latticeNode = new LatticeNode(prevStartIdx,unitTokenList.length(),new MorphTag(unitTokenList.substring(prevStartIdx, unitTokenList.length()), SYMBOL.NA, this.resources.getTable().getId(SYMBOL.NA)),NAPenaltyScore);
 			latticeNode.setPrevNodeIdx(0);
 			lattice.appendNode(latticeNode);
 			lattice.appendEndNode();
@@ -179,13 +182,13 @@ public class Komoran implements Cloneable{
 
 		//미분석인 경우
 		if(shortestPathList == null){
-			resultList.add(new LatticeNode(0, jasoUnits.length(), new MorphTag(sentence, "NA", -1), SCORE.NA));
+			resultList.add(new LatticeNode(0, unitTokenList.length(), new MorphTag(sentence, "NA", -1), SCORE.NA));
 		}else{
 			Collections.reverse(shortestPathList);
 			resultList.addAll(shortestPathList);
 		}
 
-		return new KomoranResult(resultList,jasoUnits);
+		return new KomoranResult(resultList,unitTokenList);
 	}
 
 	private void bridgeToken(Lattice lattice, int curIdx, String jasoUnits, int prevBeginSymbolIdx) {
@@ -283,7 +286,7 @@ public class Komoran implements Cloneable{
 	//TO DO
 	//기분석 사전을 어떻게 적용할 것인가....
 	//Lucene에서 활용할 때 인덱스 정보를 어떻게 keep 할 것인가..
-	private int lookupFwd(Lattice lattice, String token, int curIdx) {
+	private int lookupFwd(Lattice lattice, UnitTokenList unitTokenList, int curIdx) {
 
 		if(this.fwd == null){
 			return -1;
@@ -291,15 +294,16 @@ public class Komoran implements Cloneable{
 
 		//현재 인덱스가 시작이거나 이전 인덱스가 공백인 경우 (word 단어인 경우)
 		//현재 인덱스가 온전한 단어의 시작 부분인 경우
-		if(curIdx == 0 || token.charAt(curIdx-1) == ' '){
+		if(curIdx == 0 || unitTokenList.charAt(curIdx-1) == ' '){
 			//공백을 찾아 단어(word)의 마지막 인덱스를 가져옴
-			int wordEndIdx = token.indexOf(' ', curIdx);
-			wordEndIdx = wordEndIdx == -1 ? token.length() : wordEndIdx;
-			String targetWord = token.substring(curIdx, wordEndIdx);
+			int wordEndIdx = unitTokenList.indexOf(' ', curIdx);
+			wordEndIdx = wordEndIdx == -1 ? unitTokenList.length() : wordEndIdx;
+			String targetWord = unitTokenList.substring(curIdx, wordEndIdx);
+			UnitTokenList targetUnitList = unitTokenList.subList(curIdx, wordEndIdx);
 			List<Pair<String,String>> fwdResultList = this.fwd.get(targetWord);
 
 			if(fwdResultList != null){
-				this.insertLatticeForFwd(lattice,curIdx, wordEndIdx, fwdResultList);
+				this.insertLatticeForFwd(lattice,curIdx, wordEndIdx, fwdResultList, targetUnitList);
 				return wordEndIdx;
 			}
 		}
@@ -307,8 +311,8 @@ public class Komoran implements Cloneable{
 	}
 
 	private void insertLatticeForFwd(Lattice lattice, int beginIdx, int endIdx,
-									 List<Pair<String, String>> fwdResultList) {
-		lattice.put(beginIdx, endIdx, fwdResultList);
+									 List<Pair<String, String>> fwdResultList, UnitTokenList targetUnitList) {
+		lattice.put(beginIdx, endIdx, fwdResultList, targetUnitList);
 	}
 
 	private void continiousSymbolParsing(Lattice lattice, char charAt, int i, ContinuousSymbolInfo continuousSymbolInfo) {

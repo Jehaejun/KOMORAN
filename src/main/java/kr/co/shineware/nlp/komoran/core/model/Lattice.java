@@ -25,6 +25,8 @@ import kr.co.shineware.nlp.komoran.modeler.model.Observation;
 import kr.co.shineware.nlp.komoran.modeler.model.PosTable;
 import kr.co.shineware.nlp.komoran.modeler.model.Transition;
 import kr.co.shineware.nlp.komoran.parser.KoreanUnitParser;
+import kr.co.shineware.nlp.komoran.parser.model.UnitToken;
+import kr.co.shineware.nlp.komoran.parser.model.UnitTokenList;
 import kr.co.shineware.util.common.model.Pair;
 
 import java.util.ArrayList;
@@ -67,12 +69,12 @@ public class Lattice {
 	}
 
 	private LatticeNode makeStartNode() {
-		return new LatticeNode(-1,0,new MorphTag(SYMBOL.START, SYMBOL.START,this.getPosTable().getId(SYMBOL.START)),0);
+		return new LatticeNode(-1,0,new UnitTokenList(),new MorphTag(SYMBOL.START, SYMBOL.START,this.getPosTable().getId(SYMBOL.START)),0);
 	}
 
 	//기분석 사전을 위한 lattice put
 	public void put(int beginIdx, int endIdx,
-					List<Pair<String, String>> fwdResultList) {
+					List<Pair<String, String>> fwdResultList, UnitTokenList targetUnitList) {
 
 		if(fwdResultList.size() == 1){
 			Pair<String,String> morphPosPair = fwdResultList.get(0);
@@ -206,7 +208,7 @@ public class Lattice {
 			//			this.prevMaxScore = Double.NEGATIVE_INFINITY;
 			//이전 node list에 포함된 node 중 현재 node와 연결 시 값을 최대로 하는 node의 인덱스를 찾음
 			//			this.getMaxTransitionInfoFromPrevNodes(prevLatticeNodes,tagId,morph);
-			LatticeNode latticeNode = this.getMaxTransitionNodeFromPrevNodes(prevLatticeNodes,beginIdx,endIdx,morph,tag,tagId,score);
+			LatticeNode latticeNode = this.getMaxTransitionNodeFromPrevNodes(prevLatticeNodes,beginIdx,endIdx,morph,tag,tagId,score,targetUnitList);
 
 			if(latticeNode != null){
 				this.appendNode(latticeNode);
@@ -221,7 +223,7 @@ public class Lattice {
 
 	private LatticeNode getMaxTransitionNodeFromPrevNodes(
 			List<LatticeNode> prevLatticeNodes, int beginIdx, int endIdx,
-			String morph, String tag, int tagId, double score) {
+			String morph, String tag, int tagId, double score, UnitTokenList targetUnitList) {
 
 		double prevMaxScore = Double.NEGATIVE_INFINITY;
 		LatticeNode prevMaxNode = null;
@@ -281,7 +283,7 @@ public class Lattice {
 			}
 		}
 		if(prevMaxNode != null){
-			return this.makeNode(beginIdx,endIdx,morph,tag,tagId,prevMaxScore+score,prevLatticeNodeIdx);
+			return this.makeNode(beginIdx,endIdx,morph,tag,tagId,prevMaxScore+score,prevLatticeNodeIdx,targetUnitList);
 		}
 		return null;
 	}

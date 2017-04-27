@@ -19,6 +19,8 @@ package kr.co.shineware.nlp.komoran.core;
 
 import kr.co.shineware.nlp.komoran.model.KomoranResult;
 import kr.co.shineware.nlp.komoran.model.Token;
+import kr.co.shineware.nlp.komoran.parser.KoreanUnitParser;
+import kr.co.shineware.nlp.komoran.parser.model.UnitToken;
 import kr.co.shineware.nlp.komoran.util.KomoranCallable;
 import kr.co.shineware.util.common.file.FileUtil;
 import kr.co.shineware.util.common.model.Pair;
@@ -36,9 +38,19 @@ public class KomoranTest {
 
 	private Komoran komoran;
 
-	@Before
+//	@Before
 	public void init() throws Exception {
 		this.komoran = new Komoran("models_full");
+	}
+
+	@Test
+	public void jasoCombineTest(){
+		KoreanUnitParser koreanUnitParser = new KoreanUnitParser();
+		List<UnitToken> jaso = koreanUnitParser.parseToJasoList("업ㄱㅠㅁㅁㅁ마ㅏㅏㅏzz!!요ㅋㅋ");
+		System.out.println(jaso);
+		String combine = koreanUnitParser.combineFromJasoList(jaso);
+		System.out.println(combine);
+		System.out.println(this.komoran.analyze("업데이트했어요ㅋㅋ").getPlainText());
 	}
 
 	@Test

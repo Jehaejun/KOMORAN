@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import kr.co.shineware.nlp.komoran.interfaces.UnitParser;
+import kr.co.shineware.nlp.komoran.parser.model.TYPE;
+import kr.co.shineware.nlp.komoran.parser.model.UnitToken;
 import kr.co.shineware.util.common.model.Pair;
 
 public class KoreanUnitParser implements UnitParser{
@@ -37,6 +39,70 @@ public class KoreanUnitParser implements UnitParser{
 		0x313e, 0x313f, 0x3140, 0x3141, 0x3142, 0x3144, 0x3145, 0x3146,
 		0x3147, 0x3148, 0x314a, 0x314b, 0x314c, 0x314d, 0x314e };
 
+
+	public List<UnitToken> parseToJasoList(String str) {
+		List<UnitToken> unitTokenList = new ArrayList<>();
+
+		int length = str.length();
+		for(int i=0;i<length;i++){
+			char ch = str.charAt(i);
+			Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
+			if(block == UnicodeBlock.HANGUL_SYLLABLES){
+				int cho,jung,jong,tmp;
+				tmp = ch - 0xAC00;
+				cho = tmp / (21*28);
+				tmp = tmp % (21*28);
+				jung = tmp / 28;
+				jong = tmp % 28;
+				unitTokenList.add(new UnitToken(ChoSung[cho], cho, TYPE.CHOSUNG));
+				unitTokenList.add(new UnitToken(JungSung[jung], jung, TYPE.JUNGSUNG));
+				if(jong != 0){
+					unitTokenList.add(new UnitToken(JongSung[jong], jong, TYPE.JONGSUNG));
+				}
+			}else{
+				unitTokenList.add(new UnitToken(ch, -1, TYPE.ETC));
+			}
+		}
+		return unitTokenList;
+	}
+	
+	public String combineFromJasoList(List<UnitToken> jasoList) {
+		StringBuffer result = new StringBuffer();
+		int chosung = -1, jungsung = -1, jongsung = -1;
+		for (UnitToken unitToken : jasoList) {
+			if(unitToken.getTokenType() == TYPE.CHOSUNG){
+				if(chosung != -1) {
+					char syllable = combineJaso(chosung, jungsung, jongsung);
+					result.append(syllable);
+					chosung = -1;
+					jungsung = -1;
+					jongsung = -1;
+				}
+				chosung = unitToken.getTokenIndex();
+			}else if(unitToken.getTokenType() == TYPE.JUNGSUNG){
+				jungsung = unitToken.getTokenIndex();
+			}else if(unitToken.getTokenType() == TYPE.JONGSUNG){
+				jongsung = unitToken.getTokenIndex();
+			}else{
+				if(chosung != -1) {
+					char syllable = combineJaso(chosung, jungsung, jongsung);
+					result.append(syllable);
+				}
+				chosung = -1;
+				jungsung = -1;
+				jongsung = -1;
+				result.append(unitToken.getToken());
+			}
+		}
+		return result.toString();
+	}
+
+	private char combineJaso(int chosung, int jungsung, int jongsung) {
+		if(jongsung == -1){
+			jongsung = 0;
+		}
+		return (char) (0xac00+chosung*588+jungsung*28+jongsung);
+	}
 
 	@Override
 	public String parse(String str) {
@@ -197,4 +263,6 @@ public class KoreanUnitParser implements UnitParser{
 
 		return result.toString();
 	}
+
+
 }

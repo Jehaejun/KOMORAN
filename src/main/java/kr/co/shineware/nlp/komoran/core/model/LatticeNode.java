@@ -18,6 +18,7 @@
 package kr.co.shineware.nlp.komoran.core.model;
 
 import kr.co.shineware.nlp.komoran.model.MorphTag;
+import kr.co.shineware.nlp.komoran.parser.model.UnitTokenList;
 
 public class LatticeNode {
 
@@ -36,16 +37,18 @@ public class LatticeNode {
 	private double score;
 	private int prevNodeIdx=-1;
 	private String morph;
+	private UnitTokenList unitTokenList;
 	
 	public LatticeNode(){
 		;
 	}
 	
-	public LatticeNode(int beginIdx, int endIdx, MorphTag morphTag, double score) {
+	public LatticeNode(int beginIdx, int endIdx, UnitTokenList unitTokenList, MorphTag morphTag, double score) {
 		this.beginIdx = beginIdx;
 		this.endIdx = endIdx;
 		this.morphTag = morphTag;
 		this.score = score;
+		this.unitTokenList = unitTokenList;
 	}
 	public LatticeNode(LatticeNode latticeNode) {
 		this.beginIdx = latticeNode.getBeginIdx();
@@ -95,5 +98,13 @@ public class LatticeNode {
 
 	public String getTag() {
 		return this.morphTag.getTag();
+	}
+
+	public UnitTokenList getUnitTokenList() {
+		return unitTokenList;
+	}
+
+	public void setUnitTokenList(UnitTokenList unitTokenList) {
+		this.unitTokenList = unitTokenList;
 	}
 }
